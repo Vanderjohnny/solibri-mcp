@@ -40,5 +40,13 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vanderjohnny/solibri-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Vanderjohnny/solibri-mcp/issues"
+  },
+  "homepage": "https://github.com/Vanderjohnny/solibri-mcp#readme"
 }

@@ -19,7 +19,7 @@ de trabalho.
 **Pré-requisitos:** [Node.js 20+](https://nodejs.org) e Solibri Office instalado.
 
 ```bash
-git clone https://github.com/SEU-USUARIO/solibri-mcp.git
+git clone https://github.com/Vanderjohnny/solibri-mcp.git
 cd solibri-mcp
 npm install
 ```
