@@ -1,0 +1,44 @@
+{
+  "name": "solibri-mcp",
+  "version": "0.1.0",
+  "description": "Servidor MCP que conecta uma LLM ao Solibri via REST API local e Autorun",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "inspect": "npx @modelcontextprotocol/inspector npx tsx src/index.ts",
+    "smoke": "node scripts/smoke-test.mjs",
+    "register": "node scripts/register.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "solibri",
+    "bim",
+    "ifc",
+    "bcf",
+    "model-checking"
+  ],
+  "author": "UNK Group",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "adm-zip": "^0.6.0",
+    "fast-xml-parser": "^5.11.0",
+    "undici": "^8.10.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/node": "^26.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

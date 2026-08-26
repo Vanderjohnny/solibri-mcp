@@ -1,0 +1,12 @@
+# Normaliza fim de linha no repositorio; cada sistema recebe o seu no checkout.
+* text=auto eol=lf
+
+# Scripts do Windows precisam de CRLF para rodar corretamente.
+*.bat text eol=crlf
+
+# Binarios nao devem ser tocados.
+*.ifc binary
+*.bcf binary
+*.bcfzip binary
+*.smc binary
+*.cset binary

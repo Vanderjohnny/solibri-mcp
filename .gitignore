@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.log
+
+# Conteudo do workspace pertence a cada usuario; a estrutura de pastas e preservada.
+/workspace/*/*
+!/workspace/*/.gitkeep
+
+# Backups gerados pelo script de registro.
+*.backup-*
