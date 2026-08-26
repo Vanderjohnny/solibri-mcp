@@ -1,5 +1,9 @@
 # MCP Solibri
 
+[![CI](https://github.com/Vanderjohnny/solibri-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanderjohnny/solibri-mcp/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/node-%3E%3D20.18.1-brightgreen)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Servidor MCP que transforma o Solibri em ferramentas para uma LLM. Em vez de operar o
 Solibri na mão, você pede em português: *"rode a regra de coordenação nesses dois
 modelos e me diga as dez interferências mais graves"*.
