@@ -14,15 +14,15 @@ zip.addFile("bcf.version", Buffer.from(
 
 const topics = [
   { guid: "aaaaaaaa-1111-1111-1111-111111111111", title: "Viga colide com duto de AVAC",
-    type: "Clash", status: "Open", priority: "Critical", author: "solibri@unk.group",
-    assigned: "estrutural@unk.group", desc: "Interferencia entre viga V12 e duto principal.",
+    type: "Clash", status: "Open", priority: "Critical", author: "solibri@example.com",
+    assigned: "estrutural@example.com", desc: "Interferencia entre viga V12 e duto principal.",
     comps: ["1hjKl2mNo3PqRsTuVwXyZ$", "2AbCdEfGhIjKlMnOpQrStU"] },
   { guid: "bbbbbbbb-2222-2222-2222-222222222222", title: "Porta sem largura minima",
-    type: "Issue", status: "Open", priority: "High", author: "solibri@unk.group",
-    assigned: "arquitetura@unk.group", desc: "Porta P03 com 70 cm, abaixo da NBR 9050.",
+    type: "Issue", status: "Open", priority: "High", author: "solibri@example.com",
+    assigned: "arquitetura@example.com", desc: "Porta P03 com 70 cm, abaixo da NBR 9050.",
     comps: ["3ZyXwVuTsRqPoNmLkJiHgF"] },
   { guid: "cccccccc-3333-3333-3333-333333333333", title: "Pilar sem material definido",
-    type: "Info", status: "Closed", priority: "Low", author: "solibri@unk.group",
+    type: "Info", status: "Closed", priority: "Low", author: "solibri@example.com",
     assigned: "", desc: "Pilar P07 sem propriedade de material.", comps: [] },
 ];
 
@@ -40,7 +40,7 @@ for (const t of topics) {
   </Topic>
   <Comment Guid="c-${t.guid}">
     <Date>2026-08-21T09:00:00Z</Date>
-    <Author>coordenacao@unk.group</Author>
+    <Author>coordenacao@example.com</Author>
     <Comment>Verificar com a disciplina responsavel.</Comment>
   </Comment>
 </Markup>`, "utf8"));
