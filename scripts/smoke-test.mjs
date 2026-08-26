@@ -1,23 +1,59 @@
 /**
  * Verifica que o servidor MCP sobe, registra as ferramentas e trata erros
  * quando o Solibri nao esta aberto. Rode com: npm run smoke
+ *
+ * Testa o mesmo comando que o usuario final executa (node dist/index.js),
+ * e nao a versao TypeScript, para pegar problemas de build e de runtime.
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const entryPoint = path.join(projectRoot, "dist", "index.js");
+
+if (!fs.existsSync(entryPoint)) {
+  console.error(`Build ausente: ${entryPoint}\nRode: npm run build`);
+  process.exit(1);
+}
 
 const transport = new StdioClientTransport({
-  command: process.platform === "win32" ? "npx.cmd" : "npx",
-  args: ["tsx", "src/index.ts"],
+  command: process.execPath,
+  args: [entryPoint],
   cwd: projectRoot,
   stderr: "pipe",
 });
 
+// O stderr do servidor carrega a causa real de qualquer falha de inicializacao.
+const serverLog = [];
+transport.stderr?.on("data", (chunk) => serverLog.push(chunk.toString()));
+
+function reportServerLog() {
+  if (serverLog.length === 0) return;
+  console.error("\n--- stderr do servidor ---");
+  console.error(serverLog.join("").trim());
+  console.error("--- fim do stderr ---\n");
+}
+
 const client = new Client({ name: "smoke-test", version: "1.0.0" });
-await client.connect(transport);
+
+try {
+  await client.connect(transport);
+} catch (error) {
+  console.error(`Falha ao conectar no servidor MCP: ${error.message}`);
+  reportServerLog();
+  process.exit(1);
+}
+
+let failures = 0;
+
+function expect(label, condition, detail) {
+  const status = condition ? "OK  " : "FALHA";
+  if (!condition) failures += 1;
+  console.log(`[${status}] ${label}${detail ? ` — ${detail}` : ""}`);
+}
 
 const { tools } = await client.listTools();
 console.log(`Ferramentas registradas: ${tools.length}\n`);
@@ -29,26 +65,45 @@ for (const tool of tools) {
   console.log(`  [${kind}] ${tool.name}(${params.join(", ")})`);
 }
 
-console.log("\n-- solibri_ping (erro tratado se o Solibri estiver fechado) --");
+console.log("");
+expect("25 ferramentas registradas", tools.length === 25, `encontradas ${tools.length}`);
+
 const ping = await client.callTool({ name: "solibri_ping", arguments: {} });
-console.log(`isError=${ping.isError} :: ${ping.content[0].text.slice(0, 200)}`);
+expect(
+  "Solibri fechado devolve erro tratado",
+  ping.isError === true && /REST API do Solibri/.test(ping.content[0].text),
+  ping.content[0].text.slice(0, 90),
+);
 
-console.log("\n-- solibri_list_workspace --");
 const ws = await client.callTool({ name: "solibri_list_workspace", arguments: {} });
-console.log(ws.content[0].text.slice(0, 400));
+expect("Workspace acessivel", ws.isError !== true, JSON.parse(ws.content[0].text).workspace);
 
-console.log("\n-- validacao de caminho fora do workspace (deve falhar) --");
 const escape = await client.callTool({
   name: "solibri_read_bcf",
-  arguments: { file: "../../../Windows/System32/drivers/etc/hosts" },
+  arguments: { file: "../../../etc/passwd" },
 });
-console.log(`isError=${escape.isError} :: ${escape.content[0].text.slice(0, 200)}`);
+expect(
+  "Escape do workspace bloqueado",
+  escape.isError === true && /fora da pasta autorizada/.test(escape.content[0].text),
+  escape.content[0].text.slice(0, 60),
+);
 
-console.log("\n-- validacao de GUID invalido (deve falhar) --");
 const badGuid = await client.callTool({
   name: "solibri_show_component_info",
   arguments: { guid: "nao-e-um-guid" },
 });
-console.log(`isError=${badGuid.isError} :: ${badGuid.content[0].text.slice(0, 200)}`);
+expect(
+  "GUID invalido bloqueado",
+  badGuid.isError === true && /GUID IFC invalido/.test(badGuid.content[0].text),
+  badGuid.content[0].text.slice(0, 60),
+);
 
 await client.close();
+
+console.log("");
+if (failures > 0) {
+  console.error(`${failures} verificacao(oes) falharam.`);
+  reportServerLog();
+  process.exit(1);
+}
+console.log("Smoke test concluido sem falhas.");
