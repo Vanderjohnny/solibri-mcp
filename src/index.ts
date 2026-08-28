@@ -517,18 +517,31 @@ server.registerTool(
       rulesets: z
         .array(z.string())
         .optional()
-        .describe("Rulesets .cset ou regras .ids relativos ao workspace."),
+        .describe(
+          "Rulesets .cset e/ou regras .ids relativos ao workspace. A tarefa correta do " +
+            "Autorun e escolhida pela extensao de cada arquivo.",
+        ),
       autocomment: z.boolean().optional().describe("Gerar comentarios automaticos. Padrao true."),
       createPresentation: z
         .boolean()
         .optional()
         .describe("Criar apresentacao de resultados. Padrao true."),
       bcfOutput: z.string().optional().describe("Saida do BCF relativa ao workspace."),
-      bcfVersion: z.enum(["2.1", "3.0"]).optional().describe("Versao do BCF. Padrao 2.1."),
+      bcfVersion: z
+        .enum(["2", "2.1", "3", "3.0"])
+        .optional()
+        .describe("Versao do BCF. Padrao 2, que corresponde ao BCF 2.1."),
       reportOutput: z
         .string()
         .optional()
-        .describe("Saida do relatorio .xlsx, .pdf, .rtf ou .html relativa ao workspace."),
+        .describe(
+          "Saida do relatorio relativa ao workspace. .xlsx gera relatorio de " +
+            "coordenacao, .pdf e .rtf geram relatorio geral.",
+        ),
+      reportType: z
+        .enum(["coordination", "summary"])
+        .optional()
+        .describe("Para relatorio .xlsx: coordenacao (padrao) ou resumo de resultados."),
       smcOutput: z.string().optional().describe("Saida do projeto .smc relativa ao workspace."),
     },
     annotations: WRITES,

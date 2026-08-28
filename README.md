@@ -269,10 +269,10 @@ precisar. Copie `.env.example` para `.env` ou use o bloco `env` do aplicativo.
 | `SOLIBRI_WORKSPACE` | `./workspace` | Única pasta em que o MCP lê e grava. |
 | `SOLIBRI_STRICT_RULESETS` | `0` | `1` restringe rulesets aos listados em `config/approved-rulesets.json`. |
 
-A detecção procura `Solibri.exe` em `Program Files\Solibri`, `Solibri Anywhere`,
-`Solibri Office` e `Solibri Site`, até dois níveis de profundidade, e no macOS em
-`/Applications`. Se você tem mais de uma versão instalada, `npm run doctor` mostra
-todas e diz qual foi escolhida.
+A detecção consulta primeiro o **registro do Windows**, o que encontra a instalação em
+qualquer disco — não só em `Program Files` — e escolhe a versão mais nova quando há mais
+de uma. Se o registro não tiver nada, cai para uma varredura dos locais padrão; no macOS,
+procura em `/Applications`. Use `npm run doctor` para ver qual foi escolhida.
 
 ---
 

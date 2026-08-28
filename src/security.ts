@@ -63,7 +63,7 @@ export function assertExtension(filePath: string, allowed: readonly string[]): v
 /** Resolve um ruleset, respeitando a lista aprovada quando o modo estrito esta ativo. */
 export function resolveRuleset(userPath: string): string {
   const resolved = resolveExistingFile(userPath);
-  assertExtension(resolved, [".cset", ".ids", ".xml"]);
+  assertExtension(resolved, [".cset", ".ids"]);
 
   if (STRICT_RULESETS) {
     const approved = approvedRulesets().map((r) => path.resolve(WORKSPACE_DIRS.rulesets, r));

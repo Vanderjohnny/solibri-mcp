@@ -5,13 +5,23 @@ REM Sem --rest-api-server-http o Solibri usa HTTPS com certificado autoassinado.
 
 set "PORTA=10876"
 set "SOLIBRI="
+set "DETECTOR=%~dp0scripts\detectar-solibri.ps1"
 
-REM Permite sobrescrever a deteccao definindo SOLIBRI_EXE no ambiente.
+REM 1. Caminho definido pelo usuario tem prioridade.
 if defined SOLIBRI_EXE (
   if exist "%SOLIBRI_EXE%" set "SOLIBRI=%SOLIBRI_EXE%"
 )
 
-REM Procura Solibri.exe nos locais de instalacao usuais.
+REM 2. Registro do Windows: acha a instalacao em qualquer disco, a mais nova primeiro.
+if not defined SOLIBRI (
+  if exist "%DETECTOR%" (
+    for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%DETECTOR%"`) do (
+      set "SOLIBRI=%%P"
+    )
+  )
+)
+
+REM 3. Ultimo recurso: locais de instalacao padrao.
 if not defined SOLIBRI (
   for %%R in ("%ProgramFiles%" "%ProgramFiles(x86)%") do (
     for %%B in ("Solibri" "Solibri Anywhere" "Solibri Office" "Solibri Site") do (
@@ -22,10 +32,20 @@ if not defined SOLIBRI (
 )
 
 if not defined SOLIBRI (
-  echo Solibri nao encontrado nos locais padrao.
+  echo Solibri nao encontrado.
   echo Defina a variavel SOLIBRI_EXE com o caminho completo do Solibri.exe e rode de novo.
   pause
   exit /b 1
+)
+
+REM Uma instancia aberta sem os parametros nao sobe a API: avisa antes de abrir outra.
+tasklist /fi "imagename eq Solibri.exe" 2>nul | find /i "Solibri.exe" >nul
+if not errorlevel 1 (
+  echo.
+  echo ATENCAO: ja existe um Solibri aberto.
+  echo Feche-o antes de continuar, senao a REST API nao sera ativada.
+  echo.
+  pause
 )
 
 echo Iniciando: !SOLIBRI!

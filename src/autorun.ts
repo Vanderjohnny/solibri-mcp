@@ -16,9 +16,11 @@ export interface AutorunRequest {
   createPresentation?: boolean;
   /** Caminho de saida do BCF, relativo ao workspace. */
   bcfOutput?: string;
-  bcfVersion?: "2.1" | "3.0";
-  /** Caminho de saida do relatorio Excel/PDF, relativo ao workspace. */
+  bcfVersion?: "2" | "2.1" | "3" | "3.0";
+  /** Caminho de saida do relatorio, relativo ao workspace (.xlsx, .pdf ou .rtf). */
   reportOutput?: string;
+  /** Para relatorio .xlsx: coordenacao (padrao) ou resumo de resultados. */
+  reportType?: "coordination" | "summary";
   /** Salva o projeto .smc ao final. */
   smcOutput?: string;
 }
@@ -48,7 +50,11 @@ export function buildAutorunXml(request: AutorunRequest): { xml: string; outputs
 
   for (const ruleset of request.rulesets ?? []) {
     const resolved = resolveRuleset(ruleset);
-    tasks.push(`    <openruleset file="${xmlEscape(resolved)}" />`);
+    // O Solibri tem tarefas distintas: .cset entra por openruleset e .ids por
+    // openidsruleset. Usar a tag errada faz o Autorun ignorar as regras.
+    const tag =
+      path.extname(resolved).toLowerCase() === ".ids" ? "openidsruleset" : "openruleset";
+    tasks.push(`    <${tag} file="${xmlEscape(resolved)}" />`);
   }
 
   if ((request.rulesets ?? []).length > 0) {
@@ -65,16 +71,32 @@ export function buildAutorunXml(request: AutorunRequest): { xml: string; outputs
     const resolved = resolveInWorkspace(request.bcfOutput);
     assertExtension(resolved, [".bcf", ".bcfzip"]);
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
-    const version = request.bcfVersion ?? "2.1";
+    // O Autorun espera "2" ou "3"; aceitamos tambem 2.1 e 3.0 por conveniencia.
+    const version = (request.bcfVersion ?? "2").startsWith("3") ? "3" : "2";
     tasks.push(`    <bcfreport file="${xmlEscape(resolved)}" version="${version}" />`);
     outputs.push(path.relative(WORKSPACE, resolved).split(path.sep).join("/"));
   }
 
   if (request.reportOutput) {
     const resolved = resolveInWorkspace(request.reportOutput);
-    assertExtension(resolved, [".xlsx", ".pdf", ".rtf", ".html"]);
+    assertExtension(resolved, [".xlsx", ".pdf", ".rtf"]);
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
-    tasks.push(`    <report file="${xmlEscape(resolved)}" />`);
+
+    // Nao existe uma tarefa <report> generica: o formato define a tarefa e o atributo.
+    const escaped = xmlEscape(resolved);
+    switch (path.extname(resolved).toLowerCase()) {
+      case ".pdf":
+        tasks.push(`    <generalreport pdffile="${escaped}" />`);
+        break;
+      case ".rtf":
+        tasks.push(`    <generalreport rtffile="${escaped}" />`);
+        break;
+      default: {
+        const tag =
+          request.reportType === "summary" ? "resultsummaryreport" : "coordinationreport";
+        tasks.push(`    <${tag} file="${escaped}" />`);
+      }
+    }
     outputs.push(path.relative(WORKSPACE, resolved).split(path.sep).join("/"));
   }
 

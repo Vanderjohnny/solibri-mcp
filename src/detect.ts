@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 /**
  * Descobre o executavel do Solibri instalado na maquina.
@@ -24,6 +26,35 @@ function windowsRoots(): string[] {
     }
   }
   return candidates;
+}
+
+/**
+ * Consulta o registro do Windows pelo script PowerShell do projeto.
+ * E a fonte mais confiavel: encontra a instalacao em qualquer disco, nao so em
+ * Program Files, e devolve a versao mais nova primeiro.
+ */
+function searchRegistry(): string[] {
+  if (process.platform !== "win32") return [];
+
+  // Raiz calculada aqui, e nao importada de config.ts, para evitar ciclo de import.
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const script = path.join(projectRoot, "scripts", "detectar-solibri.ps1");
+  if (!fs.existsSync(script)) return [];
+
+  try {
+    const output = execFileSync(
+      "powershell",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Todos"],
+      { encoding: "utf8", timeout: 20_000, stdio: ["ignore", "pipe", "ignore"] },
+    );
+
+    return output
+      .split(/\r?\n/)
+      .map((line) => line.split("|")[0]?.trim() ?? "")
+      .filter((exe) => exe !== "" && fs.existsSync(exe));
+  } catch {
+    return [];
+  }
 }
 
 /** Procura Solibri.exe ate dois niveis abaixo de cada pasta candidata. */
@@ -65,17 +96,22 @@ function searchMac(): string[] {
 
 /** Todos os executaveis Solibri encontrados, do mais recente para o mais antigo. */
 export function findSolibriExecutables(): string[] {
-  const found = process.platform === "darwin" ? searchMac() : searchWindows();
+  if (process.platform === "darwin") return [...new Set(searchMac())];
 
-  // Sem informacao de versao confiavel no caminho, a data de modificacao e o
-  // melhor criterio disponivel para preferir a instalacao mais nova.
-  return [...new Set(found)].sort((a, b) => {
+  // O registro ja vem ordenado por versao; e a resposta preferida.
+  const fromRegistry = searchRegistry();
+
+  // A varredura complementa instalacoes que nao constam no registro. Sem versao
+  // no caminho, a data de modificacao e o melhor criterio para preferir a mais nova.
+  const fromDisk = [...new Set(searchWindows())].sort((a, b) => {
     try {
       return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
     } catch {
       return 0;
     }
   });
+
+  return [...new Set([...fromRegistry, ...fromDisk])];
 }
 
 /** Primeiro executavel encontrado, ou undefined se o Solibri nao estiver instalado. */
