@@ -66,13 +66,28 @@ for (const tool of tools) {
 }
 
 console.log("");
-expect("25 ferramentas registradas", tools.length === 25, `encontradas ${tools.length}`);
 
+// Conferir nomes, e nao a contagem, evita que o teste quebre a cada ferramenta nova.
+const ESSENCIAIS = [
+  "solibri_ping", "solibri_status", "solibri_list_models",
+  "solibri_get_selection_basket", "solibri_set_selection_basket",
+  "solibri_run_checking", "solibri_export_bcf", "solibri_read_bcf",
+  "solibri_autorun_start", "solibri_autorun_status",
+];
+const nomes = new Set(tools.map((t) => t.name));
+const faltando = ESSENCIAIS.filter((n) => !nomes.has(n));
+expect("Ferramentas essenciais presentes", faltando.length === 0,
+  faltando.length ? `faltando: ${faltando.join(", ")}` : `${tools.length} no total`);
+
+// O teste roda com o Solibri aberto ou fechado; as duas respostas sao corretas.
 const ping = await client.callTool({ name: "solibri_ping", arguments: {} });
+const pingTexto = ping.content[0].text;
+const solibriAberto = ping.isError !== true && /pong/i.test(pingTexto);
+const erroTratado = ping.isError === true && /REST API do Solibri/.test(pingTexto);
 expect(
-  "Solibri fechado devolve erro tratado",
-  ping.isError === true && /REST API do Solibri/.test(ping.content[0].text),
-  ping.content[0].text.slice(0, 90),
+  solibriAberto ? "Solibri aberto responde ao ping" : "Solibri fechado devolve erro tratado",
+  solibriAberto || erroTratado,
+  pingTexto.replace(/\s+/g, " ").slice(0, 80),
 );
 
 const ws = await client.callTool({ name: "solibri_list_workspace", arguments: {} });

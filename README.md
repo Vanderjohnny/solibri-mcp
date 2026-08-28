@@ -208,7 +208,7 @@ conferência visual, ou como diagnóstico de última instância — dizendo por 
 
 ## Ferramentas
 
-25 ferramentas, separadas por tipo de efeito. As anotações MCP (`readOnlyHint`,
+26 ferramentas, separadas por tipo de efeito. As anotações MCP (`readOnlyHint`,
 `destructiveHint`) permitem que o aplicativo peça confirmação apenas onde importa.
 
 ### Leitura
@@ -224,6 +224,7 @@ conferência visual, ou como diagnóstico de última instância — dizendo por 
 | `solibri_list_models` | Modelos abertos, com UUID interno e metadados. |
 | `solibri_get_model_components` | GUIDs dos componentes de um modelo, paginado. |
 | `solibri_get_model_metadata` | Metadado do modelo por chave. |
+| `solibri_get_parametric_information` | Lê uma informação paramétrica de um componente. |
 | `solibri_read_bcf` | Lê um BCF e resume as issues por status, prioridade, tipo e responsável. |
 | `solibri_list_workspace` | Arquivos disponíveis na pasta autorizada. |
 | `solibri_autorun_status` | Estado dos jobs de verificação em lote. |
@@ -309,7 +310,8 @@ projeto para uma LLM externa sem autorização do cliente.
 npm run typecheck   # verificação de tipos
 npm run build       # compila para dist/
 npm run dev         # roda direto do TypeScript
-npm run smoke       # sobe o servidor, lista as 25 ferramentas, testa os bloqueios
+npm run smoke       # sobe o servidor, confere as ferramentas e os bloqueios
+npm run test:vivo   # integração real: exige o Solibri aberto com a REST API
 npm run inspect     # abre o MCP Inspector para uso manual
 npm run doctor      # diagnóstico da instalação
 ```
@@ -347,16 +349,35 @@ documentação pública do Solibri Developer Platform. O base path `/solibri/v1`
 
 Endpoints cobertos: `/ping`, `/about`, `/status`, `/selectionBasket`, `/info/{guid}`,
 `/threed/camera`, `/models` e derivados, `/checking`, `/bcfxml/{version}`,
-`/presentations`, `/slides`, `/project` e derivados.
+`/parametricInformation`, `/presentations`, `/slides`, `/project` e derivados.
 
-Não cobertos nesta versão: `/information` e `/parametricInformation`, cujos nomes de
-parâmetro não constam no bytecode. Com o Solibri aberto, `solibri_openapi_spec` devolve
-a especificação completa e permite fechá-los.
+O `/shutdown` fica de fora de propósito: encerrar o Solibri não é decisão da LLM.
+
+### Dois endpoints quebrados no próprio Solibri
+
+`GET /information` e `GET /models/{uuid}/components` respondem **HTTP 500 para qualquer
+cliente**, testado no Solibri 26.6.1.120. O `runtime.log` mostra a causa:
+
+```
+java.lang.IllegalArgumentException: Name for argument of type [java.lang.Integer]
+not specified, and parameter name information not available via reflection.
+Ensure that the compiler uses the '-parameters' flag.
+```
+
+Esses métodos declaram `@RequestParam` sem `value=` explícito, e o jar foi compilado sem
+a flag `-parameters`. O Spring não consegue resolver o nome do parâmetro em tempo de
+execução, então **nenhum nome de query string funciona** — não há contorno do lado do
+cliente. É também por isso que o OpenAPI do Solibri traz, no campo `name` desses
+parâmetros, a descrição em vez do nome real.
+
+`solibri_get_model_components` detecta esse 500 e explica o que houve, em vez de repassar
+um erro sem contexto. Para obter GUIDs, use `solibri_get_selection_basket` com uma
+seleção feita no Solibri, ou exporte um BCF e leia com `solibri_read_bcf`.
 
 ## Próximos passos possíveis
 
-1. Ferramentas para `/information` e `/parametricInformation`, após confirmar os
-   parâmetros pelo OpenAPI.
+1. Regras de conferência próprias: IDS para requisitos de informação (arquivo XML, que
+   dá para gerar por código) e ruleset `.cset` para geometria.
 2. Plugin Java com a SMC API para consultas geométricas que a REST não expõe (por
    exemplo, portas abaixo de uma largura mínima).
 3. Conexão com servidor BCF (BIMcollab, BIM Track) em vez de arquivo local, para

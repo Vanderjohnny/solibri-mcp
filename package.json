@@ -12,7 +12,8 @@
     "smoke": "node scripts/smoke-test.mjs",
     "register": "node scripts/register.mjs",
     "doctor": "node scripts/doctor.mjs",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:vivo": "node scripts/test-ao-vivo.mjs"
   },
   "keywords": [
     "mcp",

@@ -152,6 +152,36 @@ server.registerTool(
     ),
 );
 
+server.registerTool(
+  "solibri_get_parametric_information",
+  {
+    title: "Informacao parametrica do componente",
+    description:
+      "Le uma informacao parametrica de um componente, identificada pelo id da informacao " +
+      "e pelo GUID IFC. Retorna 404 quando a combinacao nao existe no modelo aberto.",
+    inputSchema: {
+      informationUniqueId: z
+        .string()
+        .min(1)
+        .describe("Id unico da informacao no Solibri."),
+      componentGuid: z.string().describe("GUID IFC do componente, com 22 caracteres."),
+      parameters: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe("Parametros adicionais da consulta, como pares de texto."),
+    },
+    annotations: READ_ONLY,
+  },
+  async ({ informationUniqueId, componentGuid, parameters }) =>
+    run(() =>
+      solibriData("/parametricInformation", {
+        method: "POST",
+        query: { informationUniqueId, componentGuid: assertIfcGuid(componentGuid) },
+        json: parameters ?? {},
+      }),
+    ),
+);
+
 /* ---------------------- Camera 3D ---------------------- */
 
 const vector3d = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -218,11 +248,28 @@ server.registerTool(
     annotations: READ_ONLY,
   },
   async ({ modelUuid, limit, offset }) =>
-    run(() =>
-      solibriData(`/models/${encodeURIComponent(assertModelUuid(modelUuid))}/components`, {
-        query: { limit, offset },
-      }),
-    ),
+    run(async () => {
+      try {
+        return await solibriData(
+          `/models/${encodeURIComponent(assertModelUuid(modelUuid))}/components`,
+          { query: { limit, offset } },
+        );
+      } catch (error) {
+        // O Solibri 26.6 compilou este endpoint sem a flag -parameters e sem value=
+        // nas anotacoes, entao o Spring nao resolve os nomes de limit e offset e
+        // responde 500 para qualquer cliente. Nao ha nome de parametro que funcione.
+        if (error instanceof Error && /HTTP 500/.test(error.message)) {
+          throw new Error(
+            "O endpoint /models/{uuid}/components esta quebrado no Solibri (falha " +
+              "interna ao resolver os parametros limit e offset; veja runtime.log). " +
+              "Nao e um problema deste servidor e nao ha parametro que contorne. " +
+              "Para obter GUIDs, use solibri_get_selection_basket com uma selecao " +
+              "feita no Solibri, ou exporte um BCF e leia com solibri_read_bcf.",
+          );
+        }
+        throw error;
+      }
+    }),
 );
 
 server.registerTool(
@@ -359,8 +406,21 @@ server.registerTool(
       });
 
       const buffer = response.body as Buffer;
+
+      // O Solibri devolve corpo vazio quando nao ha issues. Gravar isso criaria um
+      // BCF invalido, que so falharia mais tarde na leitura.
+      if (buffer.byteLength === 0) {
+        return {
+          exported: false,
+          reason:
+            "O Solibri nao retornou nenhuma issue. Rode o checking antes de exportar, " +
+            "ou confirme que ha resultados no escopo escolhido.",
+        };
+      }
+
       fs.writeFileSync(resolved, buffer);
       return {
+        exported: true,
         savedTo: path.relative(WORKSPACE, resolved).split(path.sep).join("/"),
         bytes: buffer.byteLength,
       };
