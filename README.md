@@ -92,6 +92,10 @@ o Claude Code dentro da pasta do projeto.
 
 ## Ligar a REST API do Solibri
 
+> **Abra o Solibri sempre por aqui.** Pelo ícone comum do Windows a API não sobe, as
+> ferramentas do MCP falham, e o agente acaba tentando operar o Solibri por captura de
+> tela — o que custa muito mais tokens e erra mais. Ver [Custo](#custo-e-desempenho).
+
 O Solibri **não** liga o servidor REST sozinho: ele depende de parâmetros de linha de
 comando. No Windows, use o atalho incluído no projeto:
 
@@ -155,6 +159,50 @@ solibri_read_bcf({ file: "bcf/coordenacao.bcf", sortBySeverity: true, limit: 10 
 
 Os arquivos de entrada ficam em `workspace/models` e `workspace/rulesets`; as saídas em
 `workspace/bcf` e `workspace/reports`.
+
+---
+
+## Custo e desempenho
+
+O ganho deste MCP não é só de conveniência. Sem ele — ou com o Solibri aberto sem a API
+— um agente só tem um jeito de trabalhar: tirar print da tela, clicar, tirar print de
+novo. Isso é caro e impreciso.
+
+| Via | Tokens por operação |
+|---|---|
+| Screenshot + clique + screenshot | 2.000 – 5.000 |
+| `solibri_get_selection_basket` | ~80 |
+| `solibri_status` | ~60 |
+| `solibri_read_bcf` (50 issues resumidas) | ~1.500 |
+
+Uma conferência que custa dezenas de milhares de tokens em prints cai para centenas pela
+API. E um GUID lido da API é exato; lido de imagem, pode apontar para o componente
+errado sem ninguém perceber.
+
+O arquivo [`CLAUDE.md`](CLAUDE.md) na raiz carrega essa regra automaticamente quando o
+Claude Code roda dentro desta pasta: usar dados em vez de tela, e pedir para reabrir o
+Solibri pelo atalho quando a API não responder.
+
+### Para valer nos seus outros projetos
+
+O `CLAUDE.md` daqui só é lido quando o agente trabalha **dentro deste repositório**. Se
+você usa o Claude na pasta dos seus projetos BIM, copie o bloco abaixo para o
+`CLAUDE.md` de lá — ou para `~/.claude/CLAUDE.md`, que vale para tudo:
+
+```markdown
+## Ferramentas antes de tela
+
+Use captura de tela o mínimo possível. Sempre que existir via de dados — API, MCP,
+arquivo, linha de comando — use ela em vez de olhar a tela: custa de 10 a 30 vezes
+menos tokens e não erra na leitura.
+
+Para o Solibri, use exclusivamente as ferramentas `mcp__solibri__*`. Se `solibri_ping`
+falhar, peça para reabrir o Solibri pelo atalho "Iniciar Solibri com REST API.bat" em
+vez de tentar operar a interface.
+
+Print é aceitável só quando o programa não tem via de dados, quando o usuário pediu
+conferência visual, ou como diagnóstico de última instância — dizendo por quê.
+```
 
 ---
 
@@ -281,6 +329,7 @@ src/
   jobs.ts       controle dos jobs assíncronos
   bcf.ts        leitura e resumo de arquivos BCF
   security.ts   validação de caminhos, GUIDs e extensões
+CLAUDE.md       regras de uso para agentes: dados em vez de tela
 workspace/      única pasta acessível: models, rulesets, reports, bcf, temp
 config/         approved-rulesets.json
 scripts/        registro, diagnóstico, testes
